@@ -1,8 +1,11 @@
-dashu
+ashu
 quit()
 dsahu
 int main(){
-
+int n, m;
+for ( int i = 1;i <= 10; i++){
+    cin >> n >> m;
+}
 return 0;
 
 }
