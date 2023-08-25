@@ -1,0 +1,9 @@
+dsahuhdua
+dashu
+quit()
+dsahu
+int main(){
+
+return 0;
+
+}
