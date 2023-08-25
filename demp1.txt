@@ -1,4 +1,4 @@
-ashu
+
 dsahu
 int main(){
 int n, m;
