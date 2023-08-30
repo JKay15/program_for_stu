@@ -1,7 +1,7 @@
 from tkinter import *
-from tree import Node
+from program_for_stu.tree import Node
 from tkinter import ttk
-from storage import *
+from program_for_stu.storage import *
 
 class Application(Frame):
 
