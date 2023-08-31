@@ -109,6 +109,7 @@ class GraphGUI:
         self.canvas.bind("<B2-Motion>", self.draw_arrow)
         self.canvas.bind("<ButtonRelease-2>", self.release_arrow)
         self.root.bind("<Configure>", self.on_window_configure)
+        self.root.bind("<Key-l>", self.apply_force_directed_layout)
 
     def delete_selected_edges(self):
         if self.selected_edge:
@@ -484,6 +485,46 @@ class GraphGUI:
                 return
 
         self.root.destroy()
+        
+    def force_directed_layout(self, iterations=100, attraction=0.1, repulsion=0.5):
+        for _ in range(iterations):
+            # 初始化节点的受力为零
+            node_forces = {node: [0, 0] for node in self.nodes}
+
+            # 计算引力和斥力
+            for edge in self.edges:
+                dx = edge.end_node.x - edge.start_node.x
+                dy = edge.end_node.y - edge.start_node.y
+                distance = sqrt(dx ** 2 + dy ** 2)
+                force = attraction * distance
+                angle = atan2(dy, dx)
+                node_forces[edge.start_node][0] += force * cos(angle)
+                node_forces[edge.start_node][1] += force * sin(angle)
+                node_forces[edge.end_node][0] -= force * cos(angle)
+                node_forces[edge.end_node][1] -= force * sin(angle)
+
+            for node1 in self.nodes:
+                for node2 in self.nodes:
+                    if node1 != node2:
+                        dx = node2.x - node1.x
+                        dy = node2.y - node1.y
+                        distance = sqrt(dx ** 2 + dy ** 2)
+                        force = repulsion / distance ** 2
+                        angle = atan2(dy, dx)
+                        node_forces[node1][0] -= force * cos(angle)
+                        node_forces[node1][1] -= force * sin(angle)
+
+            # 更新节点位置
+            for node in self.nodes:
+                node.x += node_forces[node][0]
+                node.y += node_forces[node][1]
+
+            # 更新画布上的节点位置
+            self.update_nodes_and_edges_positions(self.w, self.h)
+            self.canvas.update()
+
+    def apply_force_directed_layout(self, event=None):
+        self.force_directed_layout(iterations=100, attraction=0.1, repulsion=0.5)
 
 
 if __name__ == "__main__":
@@ -493,3 +534,9 @@ if __name__ == "__main__":
     root.configure(bg="black")  # 设置根窗口背景颜色为黑色
     root.protocol("WM_DELETE_WINDOW", app.on_closing)
     root.mainloop()
+    
+#接下来需要添加的功能：对于一个节点添加一个超链接节点，那个节点是一个graph文件，那个节点的颜色是蓝色
+#选择普通节点后点击“add graph”按钮，弹出命名窗口，命名后，可以自动生成一个超链接节点（对应一个仅含有一个名字叫“root”的节点，后续所有节点都必须是其子节点，新开一个窗口开始编辑），默认超链接节点是其子节点
+#选择超链接节点后点击“load graph"按钮，可以新开一个窗口，加载出那个节点对应的graph文件
+#虽然超链接节点可以有子节点，也可以有超链接子节点，但是一般原则上还是不要这么做比较好，数据分析的时候会很麻烦
+#最好也不要出现多个节点指向一个超链接节点的情况，这个也不太好
