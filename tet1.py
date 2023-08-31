@@ -7,11 +7,11 @@ from PIL import Image, ImageDraw
 import json
 import os
 import networkx as nx
-
+import shutil
 
 class Node:
 
-    def __init__(self, canvas, x, y):
+    def __init__(self, canvas, x, y, is_hyperlink=False, file_path=None):
         self.canvas = canvas
         self.radius = 30
         self.node = canvas.create_oval(x - self.radius, y - self.radius, x + self.radius, y + self.radius, fill="red")
@@ -19,6 +19,16 @@ class Node:
         self.label_text = ""  # 新增
         self.x = x
         self.y = y
+        self.is_hyperlink = is_hyperlink
+        self.file_path = file_path
+        if is_hyperlink:
+            self.node_color = "blue"
+            self.canvas.itemconfig(self.node, fill=self.node_color)
+        #虽然超链接节点可以有子节点，也可以有超链接子节点，但是一般原则上还是不要这么做比较好，数据分析的时候会很麻烦
+        #最好也不要出现多个节点指向一个超链接节点的情况，这个也不太好
+
+    def get_position(self):
+        return self.x, self.y
 
 
 class Edge:
@@ -83,12 +93,16 @@ class GraphGUI:
         self.selection_end = None
         self.selected_edge = None  # 存储选中的边
         self.init_file = None
+        self.previous_file = None
 
         # 创建一个容器来包含按钮，并设置为横向排列
         button_frame = tk.Frame(self.canvas)
         button_frame.pack(side=tk.TOP, padx=10, pady=10)
 
         # 添加按钮到容器
+        previous_page_button = tk.Button(button_frame, text = "←", command = self.previous_load, font=("Arial", 20))
+        previous_page_button.pack(side=tk.LEFT, padx=5)
+        
         save_button = tk.Button(button_frame, text="Save Graph", command=self.save_graph)
         save_button.pack(side=tk.LEFT, padx=5)
 
@@ -102,6 +116,10 @@ class GraphGUI:
         delete_edge_button = tk.Button(button_frame, text="Delete Edge", command=self.delete_selected_edges)
         delete_edge_button.pack(side=tk.LEFT, padx=5)
 
+        #添加超链接节点的按钮
+        add_hyperlink_button = tk.Button(button_frame, text="Add Graph", command=self.add_hyperlink_node)
+        add_hyperlink_button.pack(side=tk.LEFT, padx=5)
+
         self.canvas.bind("<Button-1>", self.on_canvas_click)
         self.canvas.bind("<Double-Button-1>", self.on_canvas_double_click)
         self.canvas.bind("<B1-Motion>", self.move_node)
@@ -112,6 +130,37 @@ class GraphGUI:
         self.root.bind("<Configure>", self.on_window_configure)
         self.root.bind("<Key-l>", self.apply_force_directed_layout)
         self.root.bind("<Key-k>", self.neg_apply_force_directed_layout)
+
+    #添加超链接节点
+    def add_hyperlink_node(self):
+        if self.init_file:
+            if self.selected_node:
+                graph_path = filedialog.asksaveasfilename(initialdir=os.getcwd(), defaultextension=".graph", filetypes=[("Graph files", "*.graph")])
+                if graph_path:
+                    node = Node(self.canvas, self.selected_node.x + 100, self.selected_node.y + 100, is_hyperlink=True, file_path = graph_path)
+                    node.label_text = graph_path.split('/')[-1][:-6]
+                    self.canvas.itemconfig(node.label, text=node.label_text)
+                    self.nodes.append(node)
+                    self.create_edge(self.selected_node, node)
+                    self.update_nodes_and_edges_positions(self.w, self.h)
+                    self.canvas.update()
+                    #初始化新的图并保存
+                    graph_data = {
+                        "nodes": [{
+                            "x": 300,
+                            "y": 400,
+                            "label": "root", #仅有一个root节点
+                            "is_hyper": False,
+                            "file_path": None
+                        }],
+                        "edges": [],
+                        "init_file":graph_path,
+                        "previous_file":self.init_file
+                    }
+                    with open(graph_path, "w") as f:
+                        json.dump(graph_data, f)        
+        else:
+            messagebox.showinfo("警告", "创建超链接前，请先保存本图！")
 
     def delete_selected_edges(self):
         if self.selected_edge:
@@ -239,8 +288,8 @@ class GraphGUI:
                 edge.update_edge()
             self.edges.append(edge)
 
-    def create_node(self, x, y):
-        node = Node(self.canvas, x, y)
+    def create_node(self, x, y,is_hyper = False, file_path = None):
+        node = Node(self.canvas, x, y, is_hyperlink = is_hyper, file_path = file_path)
         self.nodes.append(node)
         self.active_node = node
 
@@ -381,12 +430,40 @@ class GraphGUI:
 
     def edit_node_text(self, node):
         if node:
-            new_text = simpledialog.askstring("Edit Node Text", "Enter new text for the node:", initialvalue=node.label_text)
-            if new_text is not None:
-                node.label_text = new_text
-                self.canvas.itemconfig(node.label, text=new_text)
-                if self.save_once == True:
-                    self.save_once = False
+            if node.is_hyperlink == False:
+                new_text = simpledialog.askstring("Edit Node Text", "Enter new text for the node:", initialvalue=node.label_text)
+                if new_text is not None:
+                    node.label_text = new_text
+                    self.canvas.itemconfig(node.label, text=new_text)
+                    if self.save_once == True:
+                        self.save_once = False
+            else:
+                new_text = simpledialog.askstring("Edit Hyperlink Node Name", "Enter new name for the hyperlink node:", initialvalue=node.label_text)
+                if new_text is not None:
+                    # 修改节点名字和文件名
+                    old_name = node.label_text
+                    new_name = new_text
+
+                    # 更新节点名字
+                    node.label_text = new_name
+                    self.canvas.itemconfig(node.label, text=new_name)
+
+                    # 更新文件名（如果有对应的文件）
+                    if node.file_path:
+                        # 获取文件的目录和文件名
+                        file_dir, file_name = os.path.split(node.file_path)
+                        
+                        # 构建新的文件路径
+                        new_file_path = os.path.join(file_dir, new_name + ".graph")
+                        
+                        # 重命名文件
+                        shutil.move(node.file_path, new_file_path)
+                        
+                        # 更新节点的文件路径
+                        node.file_path = new_file_path
+                        
+                        if self.save_once == True:
+                            self.save_once = False
 
     def edit_edge_text(self, edge):
         if edge:
@@ -411,13 +488,17 @@ class GraphGUI:
                 "nodes": [{
                     "x": node.x,
                     "y": node.y,
-                    "label": node.label_text
+                    "label": node.label_text,
+                    "is_hyper": node.is_hyperlink,
+                    "file_path": node.file_path
                 } for node in self.nodes],
                 "edges": [{
                     "start": self.nodes.index(edge.start_node),
                     "end": self.nodes.index(edge.end_node),
                     "label": edge.label_text
-                } for edge in self.edges]  # 保存边的信息，例如连接的节点索引
+                } for edge in self.edges],  # 保存边的信息，例如连接的节点索引
+                "init_file":self.init_file,
+                "previous_file":self.previous_file
             }
 
             # 保存图的数据到文件
@@ -425,11 +506,9 @@ class GraphGUI:
                 json.dump(graph_data, f)
 
             self.save_once = True
-
-    def load_graph(self):
-        # 提示用户选择加载路径
-        file_path = filedialog.askopenfilename(initialdir=os.getcwd(), filetypes=[("Graph files", "*.graph")])
-
+            self.init_file = file_path
+            
+    def load_action(self,file_path, saved_once=False):
         if file_path:
             # 从文件加载图的数据
             with open(file_path, "r") as f:
@@ -440,7 +519,7 @@ class GraphGUI:
 
             # 重新创建节点
             for node_data in graph_data["nodes"]:
-                self.create_node(node_data["x"], node_data["y"])
+                self.create_node(node_data["x"], node_data["y"], node_data["is_hyper"], node_data["file_path"])
                 new_node = self.nodes[-1]
                 new_node.label_text = node_data["label"]
                 self.canvas.itemconfig(new_node.label, text=node_data["label"])
@@ -451,6 +530,31 @@ class GraphGUI:
                 end_node = self.nodes[edge_data["end"]]
                 label_text = edge_data["label"]
                 self.create_edge(start_node, end_node, label_text)
+            
+            if graph_data["init_file"] is not None:
+                self.init_file = graph_data["init_file"]
+                
+            if graph_data["previous_file"] is not None:
+                self.previous_file = graph_data["previous_file"]
+                
+            self.save_once = saved_once
+
+    def load_graph(self):
+        self.save_secure()
+        file_path = None
+        if self.selected_node and self.selected_node.is_hyperlink == True:
+            file_path = self.selected_node.file_path
+            self.load_action(file_path,True)
+        else:
+            # 提示用户选择加载路径
+            file_path = filedialog.askopenfilename(initialdir=os.getcwd(), filetypes=[("Graph files", "*.graph")])
+            self.load_action(file_path)
+            
+            
+    def previous_load(self):
+        if self.previous_file:
+            self.save_secure()
+            self.load_action(self.previous_file,True)
 
     def clear_graph(self):
         for node in self.nodes:
@@ -471,12 +575,12 @@ class GraphGUI:
         else:
             return "discard"
 
-    def on_closing(self):
+    def save_secure(self):
         if not self.save_once:
             save_choice = self.ask_to_save_graph()
             if save_choice == "save":
                 if self.init_file:
-                    self.save_graph(filename)
+                    self.save_graph()
                 else:
                     filename = filedialog.asksaveasfilename(initialdir=os.getcwd(), defaultextension=".graph", filetypes=[("Graph files", "*.graph")])
                     if filename:
@@ -485,9 +589,11 @@ class GraphGUI:
                         return
             elif save_choice == "cancel":
                 return
-
-        self.root.destroy()
         
+    def on_closing(self):
+        self.save_secure()
+        self.root.destroy()
+
     def force_directed_layout(self, iterations=100, attraction=0.01, repulsion=0.1):
         for _ in range(iterations):
             # 初始化节点的受力为零
@@ -497,7 +603,7 @@ class GraphGUI:
             for edge in self.edges:
                 dx = edge.end_node.x - edge.start_node.x
                 dy = edge.end_node.y - edge.start_node.y
-                distance = sqrt(dx ** 2 + dy ** 2)
+                distance = sqrt(dx**2 + dy**2)
                 force = attraction * distance
                 angle = atan2(dy, dx)
                 node_forces[edge.start_node][0] += force * cos(angle)
@@ -510,8 +616,8 @@ class GraphGUI:
                     if node1 != node2:
                         dx = node2.x - node1.x
                         dy = node2.y - node1.y
-                        distance = sqrt(dx ** 2 + dy ** 2)
-                        force = repulsion / distance ** 2
+                        distance = sqrt(dx**2 + dy**2)
+                        force = repulsion / distance**2
                         angle = atan2(dy, dx)
                         node_forces[node1][0] -= force * cos(angle)
                         node_forces[node1][1] -= force * sin(angle)
@@ -527,7 +633,7 @@ class GraphGUI:
 
     def apply_force_directed_layout(self, event=None):
         self.force_directed_layout(iterations=50, attraction=0.005, repulsion=1)
-        
+
     def neg_apply_force_directed_layout(self, event=None):
         self.force_directed_layout(iterations=50, attraction=-0.005, repulsion=1)
 
@@ -539,9 +645,3 @@ if __name__ == "__main__":
     root.configure(bg="black")  # 设置根窗口背景颜色为黑色
     root.protocol("WM_DELETE_WINDOW", app.on_closing)
     root.mainloop()
-    
-#接下来需要添加的功能：对于一个节点添加一个超链接节点，那个节点是一个graph文件，那个节点的颜色是蓝色
-#选择普通节点后点击“add graph”按钮，弹出命名窗口，命名后，可以自动生成一个超链接节点（对应一个仅含有一个名字叫“root”的节点，后续所有节点都必须是其子节点，新开一个窗口开始编辑），默认超链接节点是其子节点
-#选择超链接节点后点击“load graph"按钮，可以新开一个窗口，加载出那个节点对应的graph文件
-#虽然超链接节点可以有子节点，也可以有超链接子节点，但是一般原则上还是不要这么做比较好，数据分析的时候会很麻烦
-#最好也不要出现多个节点指向一个超链接节点的情况，这个也不太好
