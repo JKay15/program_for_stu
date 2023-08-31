@@ -6,6 +6,7 @@ from tkinter import filedialog
 from PIL import Image, ImageDraw
 import json
 import os
+import networkx as nx
 
 
 class Node:
@@ -110,6 +111,7 @@ class GraphGUI:
         self.canvas.bind("<ButtonRelease-2>", self.release_arrow)
         self.root.bind("<Configure>", self.on_window_configure)
         self.root.bind("<Key-l>", self.apply_force_directed_layout)
+        self.root.bind("<Key-k>", self.neg_apply_force_directed_layout)
 
     def delete_selected_edges(self):
         if self.selected_edge:
@@ -486,7 +488,7 @@ class GraphGUI:
 
         self.root.destroy()
         
-    def force_directed_layout(self, iterations=100, attraction=0.1, repulsion=0.5):
+    def force_directed_layout(self, iterations=100, attraction=0.01, repulsion=0.1):
         for _ in range(iterations):
             # 初始化节点的受力为零
             node_forces = {node: [0, 0] for node in self.nodes}
@@ -524,7 +526,10 @@ class GraphGUI:
             self.canvas.update()
 
     def apply_force_directed_layout(self, event=None):
-        self.force_directed_layout(iterations=100, attraction=0.1, repulsion=0.5)
+        self.force_directed_layout(iterations=50, attraction=0.005, repulsion=1)
+        
+    def neg_apply_force_directed_layout(self, event=None):
+        self.force_directed_layout(iterations=50, attraction=-0.005, repulsion=1)
 
 
 if __name__ == "__main__":
