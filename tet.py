@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw
 import json
 import os
 
-
+#旧版本，缺少大量功能
 class Node:
 
     def __init__(self, canvas, x, y):
