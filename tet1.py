@@ -113,6 +113,7 @@ class GraphGUI:
         self.delete_button = tk.Button(button_frame, text="Delete Node", command=self.delete_selected_node)
         self.delete_button.pack(side=tk.LEFT, padx=5)
 
+
         # 添加按钮用于删除选中的边
         delete_edge_button = tk.Button(button_frame, text="Delete Edge", command=self.delete_selected_edges)
         delete_edge_button.pack(side=tk.LEFT, padx=5)
@@ -121,6 +122,7 @@ class GraphGUI:
         add_hyperlink_button = tk.Button(button_frame, text="Add Graph", command=self.add_hyperlink_node)
         add_hyperlink_button.pack(side=tk.LEFT, padx=5)
 
+        #绑定快捷键和功能键
         self.canvas.bind("<Button-1>", self.on_canvas_click)
         self.canvas.bind("<Double-Button-1>", self.on_canvas_double_click)
         self.canvas.bind("<B1-Motion>", self.move_node)
@@ -129,9 +131,46 @@ class GraphGUI:
         self.canvas.bind("<B2-Motion>", self.draw_arrow)
         self.canvas.bind("<ButtonRelease-2>", self.release_arrow)
         self.root.bind("<Configure>", self.on_window_configure)
-        self.root.bind("<Key-l>", self.apply_force_directed_layout)
-        self.root.bind("<Key-k>", self.neg_apply_force_directed_layout)
-
+        self.root.bind("<Command-,>", self.apply_force_directed_layout)
+        self.root.bind("<Command-.>", self.neg_apply_force_directed_layout)
+        self.root.bind("<Command-BackSpace>", lambda event: (self.delete_selected_node(),self.delete_selected_edges()))
+        self.root.bind("<Command-s>", lambda event: self.save_graph())
+        self.root.bind("<Command-l>", lambda event: self.load_graph())
+        self.root.bind("<Command-g>", lambda event: self.add_hyperlink_node())
+        self.root.bind("<Command-Left>", lambda event: self.previous_load())
+        
+        #创建顶部菜单栏
+        self.create_menu()
+        
+    #创建顶部菜单栏
+    def create_menu(self):
+        menubar = tk.Menu(self.root)
+        
+        file_menu = tk.Menu(menubar, tearoff=0)
+        file_menu.add_command(label="Load", command=self.load_graph, accelerator="Command+l")
+        file_menu.add_command(label="Save", command=self.save_graph, accelerator="Command+s")
+        menubar.add_cascade(label="File", menu=file_menu)
+        
+        help_menu = tk.Menu(menubar, tearoff=0)
+        help_menu.add_command(label="Shortcuts", command=self.show_shortcuts)
+        menubar.add_cascade(label="Help", menu=help_menu)
+        
+        self.root.config(menu=menubar)
+    
+    #展示快捷键
+    def show_shortcuts(self):
+        shortcuts_info = """
+        Shortcuts:
+        Command+l: Load Graph
+        Command+s: Save Graph
+        Command+BackSpace: Delete Node or edge
+        Command+g: Add Graph(hyperlink node)
+        Command+Left: Previous Page
+        Command+,: Gravity in
+        Command+.: Gravity out
+        """
+        messagebox.showinfo("Shortcuts", shortcuts_info)
+   
     #添加超链接节点
     def add_hyperlink_node(self):
         if self.init_file:
@@ -159,7 +198,8 @@ class GraphGUI:
                         "previous_file":self.init_file
                     }
                     with open(graph_path, "w") as f:
-                        json.dump(graph_data, f)        
+                        json.dump(graph_data, f)    
+                    self.save_once = False    
         else:
             messagebox.showinfo("警告", "创建超链接前，请先保存本图！")
 
