@@ -9,7 +9,7 @@ import os
 import networkx as nx
 import shutil
 
-#新版本，测试功能用
+#平时使用的文件
 class Node:
 
     def __init__(self, canvas, x, y, is_hyperlink=False, file_path=None):
