@@ -171,35 +171,58 @@ class GraphGUI:
         """
         messagebox.showinfo("Shortcuts", shortcuts_info)
    
-    #添加超链接节点
+    # 添加超链接节点
     def add_hyperlink_node(self):
         if self.init_file:
             if self.selected_node:
-                graph_path = filedialog.asksaveasfilename(initialdir=os.getcwd(), defaultextension=".graph", filetypes=[("Graph files", "*.graph")])
-                if graph_path:
-                    node = Node(self.canvas, self.selected_node.x + 100, self.selected_node.y + 100, is_hyperlink=True, file_path = graph_path)
-                    node.label_text = graph_path.split('/')[-1][:-6]
-                    self.canvas.itemconfig(node.label, text=node.label_text)
-                    self.nodes.append(node)
-                    self.create_edge(self.selected_node, node)
-                    self.update_nodes_and_edges_positions(self.w, self.h)
-                    self.canvas.update()
-                    #初始化新的图并保存
-                    graph_data = {
-                        "nodes": [{
-                            "x": 300,
-                            "y": 400,
-                            "label": "root", #仅有一个root节点
-                            "is_hyper": False,
-                            "file_path": None
-                        }],
-                        "edges": [],
-                        "init_file":graph_path,
-                        "previous_file":self.init_file
-                    }
-                    with open(graph_path, "w") as f:
-                        json.dump(graph_data, f)    
-                    self.save_once = False    
+                choice = messagebox.askquestion("选择操作", "是否创建新的图文件？")
+                if choice == "yes":
+                    # 创建新的图文件
+                    graph_path = filedialog.asksaveasfilename(initialdir=os.getcwd(), defaultextension=".graph", filetypes=[("Graph files", "*.graph")])
+                    if graph_path:
+                        node = Node(self.canvas, self.selected_node.x + 100, self.selected_node.y + 100, is_hyperlink=True, file_path=graph_path)
+                        node.label_text = graph_path.split('/')[-1][:-6]
+                        self.canvas.itemconfig(node.label, text=node.label_text)
+                        self.nodes.append(node)
+                        self.create_edge(self.selected_node, node)
+                        self.update_nodes_and_edges_positions(self.w, self.h)
+                        self.canvas.update()
+                        # 初始化新的图并保存
+                        graph_data = {
+                            "nodes": [{
+                                "x": 300,
+                                "y": 400,
+                                "label": "root",  # 仅有一个root节点
+                                "is_hyper": False,
+                                "file_path": None
+                            }],
+                            "edges": [],
+                            "init_file": graph_path,
+                            "previous_file": self.init_file
+                        }
+                        with open(graph_path, "w") as f:
+                            json.dump(graph_data, f)
+                        self.save_once = False
+                else:
+                    # 选择现有的图文件
+                    graph_path = filedialog.askopenfilename(initialdir=os.getcwd(), filetypes=[("Graph files", "*.graph")])
+                    if graph_path:
+                        # 创建超链接节点
+                        node = Node(self.canvas, self.selected_node.x + 100, self.selected_node.y + 100, is_hyperlink=True, file_path=graph_path)
+                        node.label_text = graph_path.split('/')[-1][:-6]
+                        self.canvas.itemconfig(node.label, text=node.label_text)
+                        self.nodes.append(node)
+                        self.create_edge(self.selected_node, node)
+                        self.update_nodes_and_edges_positions(self.w, self.h)
+                        self.canvas.update()
+                        # 更新"previous_file"为当前图的self.init_file
+                        with open(graph_path, "r") as f:
+                            data = json.load(f)
+                            data["previous_file"] = self.init_file
+                        with open(graph_path, "w") as f:
+                            json.dump(data, f)
+            else:
+                messagebox.showinfo("警告", "选择超链接前，请先选择一个节点！")
         else:
             messagebox.showinfo("警告", "创建超链接前，请先保存本图！")
 
