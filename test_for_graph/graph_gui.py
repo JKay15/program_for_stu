@@ -10,7 +10,6 @@ import shutil
 from math import atan2, degrees, sqrt, cos, sin
 
 
-
 class GraphGUI:
 
     def __init__(self, root):
@@ -41,9 +40,9 @@ class GraphGUI:
         button_frame.pack(side=tk.TOP, padx=10, pady=10)
 
         # 添加按钮到容器
-        previous_page_button = tk.Button(button_frame, text = "←", command = self.previous_load, font=("Arial", 20))
+        previous_page_button = tk.Button(button_frame, text="←", command=self.previous_load, font=("Arial", 20))
         previous_page_button.pack(side=tk.LEFT, padx=5)
-        
+
         save_button = tk.Button(button_frame, text="Save Graph", command=self.save_graph)
         save_button.pack(side=tk.LEFT, padx=5)
 
@@ -53,7 +52,6 @@ class GraphGUI:
         self.delete_button = tk.Button(button_frame, text="Delete Node", command=self.delete_selected_node)
         self.delete_button.pack(side=tk.LEFT, padx=5)
 
-
         # 添加按钮用于删除选中的边
         delete_edge_button = tk.Button(button_frame, text="Delete Edge", command=self.delete_selected_edges)
         delete_edge_button.pack(side=tk.LEFT, padx=5)
@@ -61,10 +59,10 @@ class GraphGUI:
         #添加超链接节点的按钮
         add_hyperlink_button = tk.Button(button_frame, text="Add Graph", command=self.add_hyperlink_node)
         add_hyperlink_button.pack(side=tk.LEFT, padx=5)
-        
+
         #添加节点转换的按钮
-        change_to_hyper_button = tk.Button(button_frame, text = "Hyper Change", command= self.change_to_hyper_node)
-        change_to_hyper_button.pack(side = tk.LEFT, padx= 5)
+        change_to_hyper_button = tk.Button(button_frame, text="Hyper Change", command=self.change_to_hyper_node)
+        change_to_hyper_button.pack(side=tk.LEFT, padx=5)
 
         #绑定快捷键和功能键
         self.canvas.bind("<Button-1>", self.on_canvas_click)
@@ -77,15 +75,15 @@ class GraphGUI:
         self.root.bind("<Configure>", self.on_window_configure)
         self.root.bind("<Command-,>", self.apply_force_directed_layout)
         self.root.bind("<Command-.>", self.neg_apply_force_directed_layout)
-        self.root.bind("<Command-BackSpace>", lambda event: (self.delete_selected_node(),self.delete_selected_edges()))
+        self.root.bind("<Command-BackSpace>", lambda event: (self.delete_selected_node(), self.delete_selected_edges()))
         self.root.bind("<Command-s>", lambda event: self.save_graph())
         self.root.bind("<Command-l>", lambda event: self.load_graph())
         self.root.bind("<Command-g>", lambda event: self.add_hyperlink_node())
         self.root.bind("<Command-Left>", lambda event: self.previous_load())
-        
+
         #创建顶部菜单栏
         self.create_menu()
-        
+
     #普通节点变成超链接节点
     def change_to_hyper_node(self):
         if self.selected_node:
@@ -96,7 +94,10 @@ class GraphGUI:
                     self.selected_node.is_hyperlink = True
                     self.canvas.itemconfig(self.selected_node.node, fill="blue")
                     # 创建新的图文件
-                    graph_path = filedialog.asksaveasfilename(initialfile=self.selected_node.label_text, initialdir=os.getcwd(), defaultextension=".graph", filetypes=[("Graph files", "*.graph")])
+                    graph_path = filedialog.asksaveasfilename(initialfile=self.selected_node.label_text,
+                                                              initialdir=os.getcwd(),
+                                                              defaultextension=".graph",
+                                                              filetypes=[("Graph files", "*.graph")])
                     if graph_path:
                         node = self.selected_node
                         node.file_path = graph_path
@@ -144,23 +145,22 @@ class GraphGUI:
                 messagebox.showinfo("警告", "创建超链接前，请先保存本图！")
         else:
             messagebox.showinfo("警告", "转变超链接前，请先选择一个节点！")
-                   
-        
+
     #创建顶部菜单栏
     def create_menu(self):
         menubar = tk.Menu(self.root)
-        
+
         file_menu = tk.Menu(menubar, tearoff=0)
         file_menu.add_command(label="Load", command=self.load_graph, accelerator="Command+l")
         file_menu.add_command(label="Save", command=self.save_graph, accelerator="Command+s")
         menubar.add_cascade(label="File", menu=file_menu)
-        
+
         help_menu = tk.Menu(menubar, tearoff=0)
         help_menu.add_command(label="Shortcuts", command=self.show_shortcuts)
         menubar.add_cascade(label="Help", menu=help_menu)
-        
+
         self.root.config(menu=menubar)
-    
+
     #展示快捷键
     def show_shortcuts(self):
         shortcuts_info = """
@@ -174,7 +174,7 @@ class GraphGUI:
         Command+.: Gravity out
         """
         messagebox.showinfo("Shortcuts", shortcuts_info)
-   
+
     # 添加超链接节点
     def add_hyperlink_node(self):
         if self.init_file:
@@ -356,8 +356,8 @@ class GraphGUI:
                 edge.update_edge()
             self.edges.append(edge)
 
-    def create_node(self, x, y,is_hyper = False, file_path = None):
-        node = Node(self.canvas, x, y, is_hyperlink = is_hyper, file_path = file_path)
+    def create_node(self, x, y, is_hyper=False, file_path=None):
+        node = Node(self.canvas, x, y, is_hyperlink=is_hyper, file_path=file_path)
         self.nodes.append(node)
         self.active_node = node
 
@@ -520,16 +520,16 @@ class GraphGUI:
                     if node.file_path:
                         # 获取文件的目录和文件名
                         file_dir, file_name = os.path.split(node.file_path)
-                        
+
                         # 构建新的文件路径
                         new_file_path = os.path.join(file_dir, new_name + ".graph")
-                        
+
                         # 重命名文件
                         shutil.move(node.file_path, new_file_path)
-                        
+
                         # 更新节点的文件路径
                         node.file_path = new_file_path
-                        
+
                         if self.save_once == True:
                             self.save_once = False
 
@@ -565,8 +565,8 @@ class GraphGUI:
                     "end": self.nodes.index(edge.end_node),
                     "label": edge.label_text
                 } for edge in self.edges],  # 保存边的信息，例如连接的节点索引
-                "init_file":self.init_file,
-                "previous_file":self.previous_file
+                "init_file": self.init_file,
+                "previous_file": self.previous_file
             }
 
             # 保存图的数据到文件
@@ -575,8 +575,8 @@ class GraphGUI:
 
             self.save_once = True
             self.init_file = file_path
-            
-    def load_action(self,file_path, saved_once=False):
+
+    def load_action(self, file_path, saved_once=False):
         if file_path:
             # 从文件加载图的数据
             with open(file_path, "r") as f:
@@ -598,13 +598,13 @@ class GraphGUI:
                 end_node = self.nodes[edge_data["end"]]
                 label_text = edge_data["label"]
                 self.create_edge(start_node, end_node, label_text)
-            
+
             if graph_data["init_file"] is not None:
                 self.init_file = graph_data["init_file"]
-                
+
             if graph_data["previous_file"] is not None:
                 self.previous_file = graph_data["previous_file"]
-                
+
             self.save_once = saved_once
 
     def load_graph(self):
@@ -612,17 +612,16 @@ class GraphGUI:
         file_path = None
         if self.selected_node and self.selected_node.is_hyperlink == True:
             file_path = self.selected_node.file_path
-            self.load_action(file_path,True)
+            self.load_action(file_path, True)
         else:
             # 提示用户选择加载路径
             file_path = filedialog.askopenfilename(initialdir=os.getcwd(), filetypes=[("Graph files", "*.graph")])
             self.load_action(file_path)
-            
-            
+
     def previous_load(self):
         if self.previous_file:
             self.save_secure()
-            self.load_action(self.previous_file,True)
+            self.load_action(self.previous_file, True)
 
     def clear_graph(self):
         for node in self.nodes:
@@ -657,7 +656,7 @@ class GraphGUI:
                         return
             elif save_choice == "cancel":
                 return
-        
+
     def on_closing(self):
         self.save_secure()
         self.root.destroy()
