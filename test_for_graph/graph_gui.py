@@ -61,6 +61,10 @@ class GraphGUI:
         #添加超链接节点的按钮
         add_hyperlink_button = tk.Button(button_frame, text="Add Graph", command=self.add_hyperlink_node)
         add_hyperlink_button.pack(side=tk.LEFT, padx=5)
+        
+        #添加节点转换的按钮
+        change_to_hyper_button = tk.Button(button_frame, text = "Hyper Change", command= self.change_to_hyper_node)
+        change_to_hyper_button.pack(side = tk.LEFT, padx= 5)
 
         #绑定快捷键和功能键
         self.canvas.bind("<Button-1>", self.on_canvas_click)
@@ -81,6 +85,66 @@ class GraphGUI:
         
         #创建顶部菜单栏
         self.create_menu()
+        
+    #普通节点变成超链接节点
+    def change_to_hyper_node(self):
+        if self.selected_node:
+            if self.init_file:
+                choice = messagebox.askquestion("选择操作", "是否创建新的图文件？")
+                if choice == "yes":
+                    self.selected_node.node_color = "blue"
+                    self.selected_node.is_hyperlink = True
+                    self.canvas.itemconfig(self.selected_node.node, fill="blue")
+                    # 创建新的图文件
+                    graph_path = filedialog.asksaveasfilename(initialfile=self.selected_node.label_text, initialdir=os.getcwd(), defaultextension=".graph", filetypes=[("Graph files", "*.graph")])
+                    if graph_path:
+                        node = self.selected_node
+                        node.file_path = graph_path
+                        node.label_text = graph_path.split('/')[-1][:-6]
+                        self.canvas.itemconfig(node.label, text=node.label_text)
+                        self.update_nodes_and_edges_positions(self.w, self.h)
+                        self.canvas.update()
+                        # 初始化新的图并保存
+                        graph_data = {
+                            "nodes": [{
+                                "x": 300,
+                                "y": 400,
+                                "label": "root",  # 仅有一个root节点
+                                "is_hyper": False,
+                                "file_path": None
+                            }],
+                            "edges": [],
+                            "init_file": graph_path,
+                            "previous_file": self.init_file
+                        }
+                        with open(graph_path, "w") as f:
+                            json.dump(graph_data, f)
+                        self.save_once = False
+                else:
+                    # 选择现有的图文件
+                    self.selected_node.node_color = "blue"
+                    self.selected_node.is_hyperlink = True
+                    self.canvas.itemconfig(self.selected_node.node, fill="blue")
+                    graph_path = filedialog.askopenfilename(initialdir=os.getcwd(), filetypes=[("Graph files", "*.graph")])
+                    if graph_path:
+                        # 创建超链接节点
+                        node = self.selected_node
+                        node.file_path = graph_path
+                        node.label_text = graph_path.split('/')[-1][:-6]
+                        self.canvas.itemconfig(node.label, text=node.label_text)
+                        self.update_nodes_and_edges_positions(self.w, self.h)
+                        self.canvas.update()
+                        # 更新"previous_file"为当前图的self.init_file
+                        with open(graph_path, "r") as f:
+                            data = json.load(f)
+                            data["previous_file"] = self.init_file
+                        with open(graph_path, "w") as f:
+                            json.dump(data, f)
+            else:
+                messagebox.showinfo("警告", "创建超链接前，请先保存本图！")
+        else:
+            messagebox.showinfo("警告", "转变超链接前，请先选择一个节点！")
+                   
         
     #创建顶部菜单栏
     def create_menu(self):
