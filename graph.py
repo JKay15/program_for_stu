@@ -11,7 +11,7 @@ import shutil
 
 #新版本，测试功能用
 class Node:
-
+    
     def __init__(self, canvas, x, y, is_hyperlink=False, file_path=None):
         self.canvas = canvas
         self.radius = 30
